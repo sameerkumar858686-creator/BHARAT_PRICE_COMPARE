@@ -1,0 +1,13 @@
+
+streamlit
+pandas
+requests
+beautifulsoup4
+sqlalchemy
+python-dotenv
+plotly
+fastapi
+uvicorn
+pydantic
+rapidfuzz
+pillow
