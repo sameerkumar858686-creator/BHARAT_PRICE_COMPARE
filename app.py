@@ -822,3 +822,39 @@ Made for India 🇮🇳
 © 2026 Bharat Price Compare. All Rights Reserved.
 </div>
 """, unsafe_allow_html=True)
+
+
+# =====================================================
+# AMAZON AFFILIATE DISCLOSURE
+# =====================================================
+
+st.markdown("---")
+
+st.markdown(
+    """
+    <div style="
+        background-color: #142238;
+        padding: 18px;
+        border-radius: 10px;
+        border: 1px solid #334155;
+        text-align: center;
+        margin-top: 20px;
+    ">
+        <h4 style="color: #38d9c5;">
+            Affiliate Disclosure
+        </h4>
+
+        <p style="color: #ffffff;">
+            As an Amazon Associate I earn from
+            qualifying purchases.
+        </p>
+
+        <p style="color: #aab8cc; font-size: 13px;">
+            Some links on Bharat Price Compare are
+            affiliate links. We may earn a commission
+            when you make a qualifying purchase.
+        </p>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
