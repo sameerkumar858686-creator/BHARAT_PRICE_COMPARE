@@ -411,7 +411,7 @@ def show_demo_comparison(product):
 
       for platform, price in sorted_prices:
 
-        col1, col2, col3 = st.columns([3, 2, 2])
+            col1, col2, col3 = st.columns([3, 2, 2])
 
         with col1:
             st.write("**" + platform + "**")
