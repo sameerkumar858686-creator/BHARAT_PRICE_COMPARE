@@ -255,6 +255,14 @@ DEMO_PRODUCTS = [
             "Reliance Digital": 69990,
             "Vijay Sales": 69500,
             "Tata CLiQ": 70999
+        },
+        "affiliate_links": {
+            "Amazon India": "https://link.amazon/B0hL3VNSg",
+            "Flipkart": "",
+            "Croma": "",
+            "Reliance Digital": "",
+            "Vijay Sales": "",
+            "Tata CLiQ": ""
         }
     },
     {
@@ -267,6 +275,14 @@ DEMO_PRODUCTS = [
             "Reliance Digital": 74990,
             "Vijay Sales": 73999,
             "Tata CLiQ": 76999
+        },
+        "affiliate_links": {
+            "Amazon India": "https://link.amazon/B0hL3VNSg",
+            "Flipkart": "",
+            "Croma": "",
+            "Reliance Digital": "",
+            "Vijay Sales": "",
+            "Tata CLiQ": ""
         }
     },
     {
@@ -279,6 +295,14 @@ DEMO_PRODUCTS = [
             "Reliance Digital": 18499,
             "Vijay Sales": 17990,
             "Tata CLiQ": 18999
+        },
+        "affiliate_links": {
+            "Amazon India": "https://link.amazon/B0hL3VNSg",
+            "Flipkart": "",
+            "Croma": "",
+            "Reliance Digital": "",
+            "Vijay Sales": "",
+            "Tata CLiQ": ""
         }
     },
     {
@@ -291,11 +315,17 @@ DEMO_PRODUCTS = [
             "Reliance Digital": 43499,
             "Vijay Sales": 42500,
             "Tata CLiQ": 44999
-         },
-    "affiliate_links": {
-        "Amazon India": "YAHAN_APNA_AMAZON_AFFILIATE_LINK"
+        },
+        "affiliate_links": {
+            "Amazon India": "https://link.amazon/B0hL3VNSg",
+            "Flipkart": "",
+            "Croma": "",
+            "Reliance Digital": "",
+            "Vijay Sales": "",
+            "Tata CLiQ": ""
+        }
     }
-},
+]
 
 # =====================================================
 # DEMO PRODUCT SEARCH FUNCTION
