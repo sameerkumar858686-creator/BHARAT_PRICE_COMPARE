@@ -291,10 +291,11 @@ DEMO_PRODUCTS = [
             "Reliance Digital": 43499,
             "Vijay Sales": 42500,
             "Tata CLiQ": 44999
-        }
+         },
+    "affiliate_links": {
+        "Amazon India": "YAHAN_APNA_AMAZON_AFFILIATE_LINK"
     }
-]
-
+},
 
 # =====================================================
 # DEMO PRODUCT SEARCH FUNCTION
@@ -380,21 +381,30 @@ def show_demo_comparison(product):
 
     for platform, price in sorted_prices:
 
-        col1, col2, col3 = st.columns([3, 2, 2])
+    col1, col2, col3 = st.columns([3, 2, 2])
 
-        with col1:
-            st.write("**" + platform + "**")
+    with col1:
+        st.write("**" + platform + "**")
 
-        with col2:
-            st.write(f"₹{price:,}")
+    with col2:
+        st.write(f"₹{price:,}")
 
-        with col3:
+    with col3:
 
-            if platform == lowest_platform:
-                st.success("Lowest Demo Price")
-            else:
-                st.info("Demo Price")
+        affiliate_link = product.get("affiliate_links", {}).get(platform, "")
 
+        if affiliate_link:
+            st.link_button(
+                "🛒 BUY NOW",
+                affiliate_link,
+                use_container_width=True
+            )
+
+        elif platform == lowest_platform:
+            st.success("🏆 Lowest Demo Price")
+
+        else:
+            st.info("Demo Price")
     st.caption(
         "Sample prices are illustrative only. "
         "No retailer API or live price has been connected."
