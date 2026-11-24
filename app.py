@@ -257,7 +257,7 @@ DEMO_PRODUCTS = [
             "Tata CLiQ": 70999
         },
         "affiliate_links": {
-            "Amazon India": "https://link.amazon/B09unWX6e",
+            "Amazon India": "https://www.amazon.in/Boldfit-Corrector-Adjustable-Breathable-Straightener/dp/B0GHX848PP?aref=ZMc1TMLYti&content-id=amzn1.sym.7b6188a8-103f-4f88-b43a-19aba06e30c1%3Aamzn1.sym.7b6188a8-103f-4f88-b43a-19aba06e30c1&crid=2U1NOCLR3G3Z5&cv_ct_cx=body%2Bback%2Bposture%2Bcorrecting%2Bbelt&keywords=body%2Bback%2Bposture%2Bcorrecting%2Bbelt&pd_rd_i=B0GHX848PP&pd_rd_r=3a9cee39-ccbb-4851-b7ae-9ede563a00d1&pd_rd_w=OhF5q&pd_rd_wg=OAuyt&pf_rd_p=7b6188a8-103f-4f88-b43a-19aba06e30c1&pf_rd_r=933ZT0S3X42A18JZM2DQ&qid=1795525524&sbo=RZvfv%2F%2FHxDF%2BO5021pAnSA%3D%3D&sprefix=back%2Bbody%2Bpos%2Caps%2C747&sr=1-1-941ebe59-d25b-49d0-b214-12cc5b66c90f&th=1&linkCode=ll2&tag=bharatcompare-21&linkId=46af7374e35c2d4b7f93ec475558ce71&ref_=as_li_ss_tl",
             "Flipkart": "",
             "Croma": "",
             "Reliance Digital": "",
@@ -277,7 +277,7 @@ DEMO_PRODUCTS = [
             "Tata CLiQ": 76999
         },
         "affiliate_links": {
-            "Amazon India": "https://link.amazon/B09unWX6e",
+            "Amazon India": "https://www.amazon.in/Boldfit-Corrector-Adjustable-Breathable-Straightener/dp/B0GHX848PP?aref=ZMc1TMLYti&content-id=amzn1.sym.7b6188a8-103f-4f88-b43a-19aba06e30c1%3Aamzn1.sym.7b6188a8-103f-4f88-b43a-19aba06e30c1&crid=2U1NOCLR3G3Z5&cv_ct_cx=body%2Bback%2Bposture%2Bcorrecting%2Bbelt&keywords=body%2Bback%2Bposture%2Bcorrecting%2Bbelt&pd_rd_i=B0GHX848PP&pd_rd_r=3a9cee39-ccbb-4851-b7ae-9ede563a00d1&pd_rd_w=OhF5q&pd_rd_wg=OAuyt&pf_rd_p=7b6188a8-103f-4f88-b43a-19aba06e30c1&pf_rd_r=933ZT0S3X42A18JZM2DQ&qid=1795525524&sbo=RZvfv%2F%2FHxDF%2BO5021pAnSA%3D%3D&sprefix=back%2Bbody%2Bpos%2Caps%2C747&sr=1-1-941ebe59-d25b-49d0-b214-12cc5b66c90f&th=1&linkCode=ll2&tag=bharatcompare-21&linkId=46af7374e35c2d4b7f93ec475558ce71&ref_=as_li_ss_tl",
             "Flipkart": "",
             "Croma": "",
             "Reliance Digital": "",
@@ -297,7 +297,7 @@ DEMO_PRODUCTS = [
             "Tata CLiQ": 18999
         },
         "affiliate_links": {
-            "Amazon India": "https://link.amazon/B09unWX6e",
+            "Amazon India": "https://www.amazon.in/Boldfit-Corrector-Adjustable-Breathable-Straightener/dp/B0GHX848PP?aref=ZMc1TMLYti&content-id=amzn1.sym.7b6188a8-103f-4f88-b43a-19aba06e30c1%3Aamzn1.sym.7b6188a8-103f-4f88-b43a-19aba06e30c1&crid=2U1NOCLR3G3Z5&cv_ct_cx=body%2Bback%2Bposture%2Bcorrecting%2Bbelt&keywords=body%2Bback%2Bposture%2Bcorrecting%2Bbelt&pd_rd_i=B0GHX848PP&pd_rd_r=3a9cee39-ccbb-4851-b7ae-9ede563a00d1&pd_rd_w=OhF5q&pd_rd_wg=OAuyt&pf_rd_p=7b6188a8-103f-4f88-b43a-19aba06e30c1&pf_rd_r=933ZT0S3X42A18JZM2DQ&qid=1795525524&sbo=RZvfv%2F%2FHxDF%2BO5021pAnSA%3D%3D&sprefix=back%2Bbody%2Bpos%2Caps%2C747&sr=1-1-941ebe59-d25b-49d0-b214-12cc5b66c90f&th=1&linkCode=ll2&tag=bharatcompare-21&linkId=46af7374e35c2d4b7f93ec475558ce71&ref_=as_li_ss_tl",
             "Flipkart": "",
             "Croma": "",
             "Reliance Digital": "",
@@ -317,7 +317,7 @@ DEMO_PRODUCTS = [
             "Tata CLiQ": 44999
         },
         "affiliate_links": {
-            "Amazon India": "https://link.amazon/B09unWX6e",
+            "Amazon India": "https://www.amazon.in/Boldfit-Corrector-Adjustable-Breathable-Straightener/dp/B0GHX848PP?aref=ZMc1TMLYti&content-id=amzn1.sym.7b6188a8-103f-4f88-b43a-19aba06e30c1%3Aamzn1.sym.7b6188a8-103f-4f88-b43a-19aba06e30c1&crid=2U1NOCLR3G3Z5&cv_ct_cx=body%2Bback%2Bposture%2Bcorrecting%2Bbelt&keywords=body%2Bback%2Bposture%2Bcorrecting%2Bbelt&pd_rd_i=B0GHX848PP&pd_rd_r=3a9cee39-ccbb-4851-b7ae-9ede563a00d1&pd_rd_w=OhF5q&pd_rd_wg=OAuyt&pf_rd_p=7b6188a8-103f-4f88-b43a-19aba06e30c1&pf_rd_r=933ZT0S3X42A18JZM2DQ&qid=1795525524&sbo=RZvfv%2F%2FHxDF%2BO5021pAnSA%3D%3D&sprefix=back%2Bbody%2Bpos%2Caps%2C747&sr=1-1-941ebe59-d25b-49d0-b214-12cc5b66c90f&th=1&linkCode=ll2&tag=bharatcompare-21&linkId=46af7374e35c2d4b7f93ec475558ce71&ref_=as_li_ss_tl",
             "Flipkart": "",
             "Croma": "",
             "Reliance Digital": "",
