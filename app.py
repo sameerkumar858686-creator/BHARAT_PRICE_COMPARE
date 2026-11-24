@@ -409,31 +409,36 @@ def show_demo_comparison(product):
         key=lambda item: item[1]
     )
 
-   for platform, price in sorted_prices:
+      for platform, price in sorted_prices:
 
-    col1, col2, col3 = st.columns([3, 2, 2])
+        col1, col2, col3 = st.columns([3, 2, 2])
 
-    with col1:
-        st.write("**" + platform + "**")
+        with col1:
+            st.write("**" + platform + "**")
 
-    with col2:
-        st.write(f"₹{price:,}")
+        with col2:
+            st.write(f"₹{price:,}")
 
-    with col3:
-        affiliate_link = product.get("affiliate_links", {}).get(platform, "")
+        with col3:
+            affiliate_link = product.get("affiliate_links", {}).get(platform, "")
 
-        if affiliate_link:
-            st.link_button(
-                "🛒 BUY NOW",
-                affiliate_link,
-                use_container_width=True
-            )
+            if affiliate_link:
+                st.link_button(
+                    "🛒 BUY NOW",
+                    affiliate_link,
+                    use_container_width=True
+                )
 
-        elif platform == lowest_platform:
-            st.success("🏆 Lowest Demo Price")
+            elif platform == lowest_platform:
+                st.success("🏆 Lowest Demo Price")
 
-        else:
-            st.info("Demo Price")
+            else:
+                st.info("Demo Price")
+
+    st.caption(
+        "Sample prices are illustrative only. "
+        "No retailer API or live price has been connected."
+    )
 
 st.caption(
     "Sample prices are illustrative only. "
