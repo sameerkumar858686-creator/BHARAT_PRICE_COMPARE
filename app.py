@@ -409,7 +409,7 @@ def show_demo_comparison(product):
         key=lambda item: item[1]
     )
 
-    for platform, price in sorted_prices:
+   for platform, price in sorted_prices:
 
     col1, col2, col3 = st.columns([3, 2, 2])
 
@@ -420,7 +420,6 @@ def show_demo_comparison(product):
         st.write(f"₹{price:,}")
 
     with col3:
-
         affiliate_link = product.get("affiliate_links", {}).get(platform, "")
 
         if affiliate_link:
@@ -435,11 +434,11 @@ def show_demo_comparison(product):
 
         else:
             st.info("Demo Price")
-    st.caption(
-        "Sample prices are illustrative only. "
-        "No retailer API or live price has been connected."
-    )
 
+st.caption(
+    "Sample prices are illustrative only. "
+    "No retailer API or live price has been connected."
+)
 
 # =====================================================
 # SIDEBAR
