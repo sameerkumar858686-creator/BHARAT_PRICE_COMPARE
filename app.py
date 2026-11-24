@@ -257,7 +257,7 @@ DEMO_PRODUCTS = [
             "Tata CLiQ": 70999
         },
         "affiliate_links": {
-            "Amazon India": "https://link.amazon/B0hL3VNSg",
+            "Amazon India": "https://link.amazon/B09unWX6e",
             "Flipkart": "",
             "Croma": "",
             "Reliance Digital": "",
@@ -277,7 +277,7 @@ DEMO_PRODUCTS = [
             "Tata CLiQ": 76999
         },
         "affiliate_links": {
-            "Amazon India": "https://link.amazon/B0hL3VNSg",
+            "Amazon India": "https://link.amazon/B09unWX6e",
             "Flipkart": "",
             "Croma": "",
             "Reliance Digital": "",
@@ -297,7 +297,7 @@ DEMO_PRODUCTS = [
             "Tata CLiQ": 18999
         },
         "affiliate_links": {
-            "Amazon India": "https://link.amazon/B0hL3VNSg",
+            "Amazon India": "https://link.amazon/B09unWX6e",
             "Flipkart": "",
             "Croma": "",
             "Reliance Digital": "",
@@ -317,7 +317,7 @@ DEMO_PRODUCTS = [
             "Tata CLiQ": 44999
         },
         "affiliate_links": {
-            "Amazon India": "https://link.amazon/B0hL3VNSg",
+            "Amazon India": "https://link.amazon/B09unWX6e",
             "Flipkart": "",
             "Croma": "",
             "Reliance Digital": "",
