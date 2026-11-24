@@ -404,14 +404,14 @@ def show_demo_comparison(product):
 
     st.markdown("### 🛒 Compare Shopping Platforms")
 
-    sorted_prices = sorted(
+        sorted_prices = sorted(
         prices.items(),
         key=lambda item: item[1]
     )
 
-      for platform, price in sorted_prices:
+    for platform, price in sorted_prices:
 
-            col1, col2, col3 = st.columns([3, 2, 2])
+        col1, col2, col3 = st.columns([3, 2, 2])
 
         with col1:
             st.write("**" + platform + "**")
@@ -434,6 +434,11 @@ def show_demo_comparison(product):
 
             else:
                 st.info("Demo Price")
+
+    st.caption(
+        "Sample prices are illustrative only. "
+        "No retailer API or live price has been connected."
+    )
 
     st.caption(
         "Sample prices are illustrative only. "
