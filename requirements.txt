@@ -11,3 +11,4 @@ uvicorn
 pydantic
 rapidfuzz
 pillow
+serpapi
