@@ -1,15 +1,16 @@
 
 import streamlit as st
 import os
+import re
 import serpapi
 
-from urllib.parse import urlparse, quote_plus
+from urllib.parse import urlparse, unquote
 from datetime import datetime
 from dotenv import load_dotenv
 
 # =====================================================
 # BHARAT PRICE COMPARE
-# MAIN APPLICATION
+# LIVE PRODUCT SEARCH - SERPAPI GOOGLE SHOPPING
 # =====================================================
 
 st.set_page_config(
@@ -18,13 +19,21 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
-# =====================================================
-# SERPAPI CONFIGURATION
-# =====================================================
 
 load_dotenv()
 
-SERPAPI_API_KEY = os.getenv("SERPAPI_API_KEY", "").strip()
+# =====================================================
+# API CONFIGURATION
+# =====================================================
+
+try:
+    SERPAPI_API_KEY = st.secrets.get("SERPAPI_API_KEY", "")
+except Exception:
+    SERPAPI_API_KEY = ""
+
+SERPAPI_API_KEY = (
+    SERPAPI_API_KEY or os.getenv("SERPAPI_API_KEY", "")
+).strip()
 
 # =====================================================
 # CUSTOM CSS
@@ -32,144 +41,108 @@ SERPAPI_API_KEY = os.getenv("SERPAPI_API_KEY", "").strip()
 
 st.markdown("""
 <style>
-
 .stApp {
     background: #080F1C;
-    color: #FFFFFF;
+    color: white;
 }
-
-[data-testid="stHeader"] {
-    background: transparent;
-}
-
 [data-testid="stSidebar"] {
     background: #101B2D;
     border-right: 1px solid #24334B;
 }
-
 .block-container {
     padding-top: 2rem;
     padding-bottom: 3rem;
     max-width: 1450px;
 }
-
 h1, h2, h3 {
-    color: #FFFFFF !important;
+    color: white !important;
 }
-
 p, label {
     color: #B9C5D8;
 }
-
 .hero {
     background: linear-gradient(120deg, #142B45, #102039, #123B45);
-    padding: 42px 35px;
+    padding: 35px;
     border-radius: 20px;
     border: 1px solid #25445A;
     margin-bottom: 25px;
 }
-
 .hero-tag {
     color: #38D6BD;
     font-size: 13px;
     font-weight: 800;
     letter-spacing: 3px;
 }
-
 .hero-title {
-    font-size: 43px;
+    font-size: 40px;
     font-weight: 850;
     margin-top: 12px;
     line-height: 1.2;
     color: white;
 }
-
-.hero-description {
-    color: #B8C9DC;
-    font-size: 16px;
-    margin-top: 12px;
-    line-height: 1.7;
-}
-
 .highlight {
     color: #39D9C0;
 }
-
 .feature-card {
     background: #111E30;
     border: 1px solid #243650;
     border-radius: 15px;
-    padding: 22px;
-    min-height: 145px;
+    padding: 20px;
+    min-height: 140px;
     margin-bottom: 12px;
 }
-
-.feature-icon {
-    font-size: 27px;
-}
-
 .feature-title {
-    color: #FFFFFF;
+    color: white;
     font-size: 17px;
     font-weight: 750;
-    margin-top: 12px;
+    margin-top: 10px;
 }
-
 .feature-description {
     color: #A9B7C9;
     font-size: 13px;
     margin-top: 7px;
     line-height: 1.5;
 }
-
-.section-heading {
-    font-size: 24px;
-    font-weight: 800;
-    color: white;
-    margin-top: 25px;
-    margin-bottom: 15px;
-}
-
 .platform-card {
     background: #111E30;
     border: 1px solid #263A55;
-    padding: 16px 10px;
+    padding: 15px 10px;
     border-radius: 12px;
     text-align: center;
     color: white;
     font-weight: 700;
     margin-bottom: 10px;
 }
-
 .platform-status {
     font-size: 11px;
     color: #39D9C0;
     margin-top: 5px;
 }
-
 div.stButton > button {
     background: linear-gradient(90deg, #12BFA8, #23D6BB);
     color: #07131F;
     border: none;
     border-radius: 10px;
     font-weight: 800;
-    min-height: 45px;
-    width: 100%;
+    min-height: 42px;
 }
-
 div.stButton > button:hover {
     background: #36E2CA;
     color: #07131F;
-    border: none;
 }
-
 div[data-testid="stTextInput"] input {
     background: #142239;
     color: white;
     border: 1px solid #31445F;
     border-radius: 10px;
 }
-
+.deal-card {
+    background: #111E30;
+    border: 1px solid #263A55;
+    padding: 15px;
+    border-radius: 14px;
+    margin-bottom: 10px;
+}
 .footer {
     border-top: 1px solid #243650;
     padding-top: 20px;
@@ -178,10 +151,8 @@ div[data-testid="stTextInput"] input {
     color: #8798AF;
     font-size: 12px;
 }
-
 </style>
 """, unsafe_allow_html=True)
-
 
 # =====================================================
 # SESSION STATE
@@ -193,9 +164,14 @@ if "product_url" not in st.session_state:
 if "search_history" not in st.session_state:
     st.session_state.search_history = []
 
+if "live_results" not in st.session_state:
+    st.session_state.live_results = []
+
+if "last_query" not in st.session_state:
+    st.session_state.last_query = ""
 
 # =====================================================
-# SUPPORTED SHOPPING DOMAINS
+# SUPPORTED PLATFORMS
 # =====================================================
 
 PLATFORMS = {
@@ -207,13 +183,11 @@ PLATFORMS = {
     "tatacliq.com": "Tata CLiQ"
 }
 
-
 # =====================================================
 # URL ANALYZER
 # =====================================================
 
 def analyze_product_url(url):
-
     url = url.strip()
 
     if not url:
@@ -232,7 +206,6 @@ def analyze_product_url(url):
         platform = None
 
         for website, name in PLATFORMS.items():
-
             if domain == website or domain.endswith("." + website):
                 platform = name
                 break
@@ -250,248 +223,208 @@ def analyze_product_url(url):
         return None, "Invalid product URL."
 
 # =====================================================
-# SHOPPING PLATFORM SEARCH LINKS
+# EXTRACT SEARCH QUERY FROM PRODUCT URL
 # =====================================================
 
-def platform_search_url(platform, product_name):
+def product_query_from_url(url):
+    parsed = urlparse(url)
+    path = unquote(parsed.path)
 
-    query = quote_plus(product_name)
+    # Amazon product links often contain /product-name/dp/ASIN
+    if "/dp/" in path:
+        path = path.split("/dp/")[0]
 
-    search_urls = {
+    # Remove common shopping URL noise
+    path = path.replace("-", " ").replace("_", " ").replace("/", " ")
+    path = re.sub(r"\s+", " ", path)
+    path = re.sub(r"\b(dp|gp|product|products|item)\b", " ", path)
+    path = re.sub(r"\s+", " ", path).strip()
 
-        "Amazon India":
-            f"https://www.amazon.in/s?k={query}",
-
-        "Flipkart":
-            f"https://www.flipkart.com/search?q={query}",
-
-        "Croma":
-            f"https://www.croma.com/search/?text={query}",
-
-        "Reliance Digital":
-            f"https://www.reliancedigital.in/search?q={query}",
-
-        "Vijay Sales":
-            f"https://www.vijaysales.com/search?query={query}",
-
-        "Tata CLiQ":
-            f"https://www.tatacliq.com/search/?searchCategory=all&text={query}",
-    }
-
-    return search_urls.get(platform, "")
+    return path[:150]
 
 # =====================================================
-# DEMO PRODUCT DATABASE
-# ALL PRICES ARE SAMPLE DATA, NOT LIVE PRICES
+# PRICE PARSER
 # =====================================================
 
-DEMO_PRODUCTS = [
-    {
-        "name": "iPhone 16 128GB",
-        "category": "Smartphone",
-        "prices": {
-            "Amazon India": 69999,
-            "Flipkart": 67999,
-            "Croma": 70499,
-            "Reliance Digital": 69990,
-            "Vijay Sales": 69500,
-            "Tata CLiQ": 70999
-        },
-        "affiliate_links": {
-            "Amazon India": "https://www.amazon.in/Boldfit-Corrector-Adjustable-Breathable-Straightener/dp/B0GHX848PP?aref=ZMc1TMLYti&content-id=amzn1.sym.7b6188a8-103f-4f88-b43a-19aba06e30c1%3Aamzn1.sym.7b6188a8-103f-4f88-b43a-19aba06e30c1&crid=2U1NOCLR3G3Z5&cv_ct_cx=body%2Bback%2Bposture%2Bcorrecting%2Bbelt&keywords=body%2Bback%2Bposture%2Bcorrecting%2Bbelt&pd_rd_i=B0GHX848PP&pd_rd_r=3a9cee39-ccbb-4851-b7ae-9ede563a00d1&pd_rd_w=OhF5q&pd_rd_wg=OAuyt&pf_rd_p=7b6188a8-103f-4f88-b43a-19aba06e30c1&pf_rd_r=933ZT0S3X42A18JZM2DQ&qid=1795525524&sbo=RZvfv%2F%2FHxDF%2BO5021pAnSA%3D%3D&sprefix=back%2Bbody%2Bpos%2Caps%2C747&sr=1-1-941ebe59-d25b-49d0-b214-12cc5b66c90f&th=1&linkCode=ll2&tag=bharatcompare-21&linkId=46af7374e35c2d4b7f93ec475558ce71&ref_=as_li_ss_tl",
-            "Flipkart": "",
-            "Croma": "",
-            "Reliance Digital": "",
-            "Vijay Sales": "",
-            "Tata CLiQ": ""
-        }
-    },
-    {
-        "name": "Samsung Galaxy S25 256GB",
-        "category": "Smartphone",
-        "prices": {
-            "Amazon India": 74999,
-            "Flipkart": 72999,
-            "Croma": 75999,
-            "Reliance Digital": 74990,
-            "Vijay Sales": 73999,
-            "Tata CLiQ": 76999
-        },
-        "affiliate_links": {
-            "Amazon India": "https://www.amazon.in/Boldfit-Corrector-Adjustable-Breathable-Straightener/dp/B0GHX848PP?aref=ZMc1TMLYti&content-id=amzn1.sym.7b6188a8-103f-4f88-b43a-19aba06e30c1%3Aamzn1.sym.7b6188a8-103f-4f88-b43a-19aba06e30c1&crid=2U1NOCLR3G3Z5&cv_ct_cx=body%2Bback%2Bposture%2Bcorrecting%2Bbelt&keywords=body%2Bback%2Bposture%2Bcorrecting%2Bbelt&pd_rd_i=B0GHX848PP&pd_rd_r=3a9cee39-ccbb-4851-b7ae-9ede563a00d1&pd_rd_w=OhF5q&pd_rd_wg=OAuyt&pf_rd_p=7b6188a8-103f-4f88-b43a-19aba06e30c1&pf_rd_r=933ZT0S3X42A18JZM2DQ&qid=1795525524&sbo=RZvfv%2F%2FHxDF%2BO5021pAnSA%3D%3D&sprefix=back%2Bbody%2Bpos%2Caps%2C747&sr=1-1-941ebe59-d25b-49d0-b214-12cc5b66c90f&th=1&linkCode=ll2&tag=bharatcompare-21&linkId=46af7374e35c2d4b7f93ec475558ce71&ref_=as_li_ss_tl",
-            "Flipkart": "",
-            "Croma": "",
-            "Reliance Digital": "",
-            "Vijay Sales": "",
-            "Tata CLiQ": ""
-        }
-    },
-    {
-        "name": "Redmi Note 14 5G",
-        "category": "Smartphone",
-        "prices": {
-            "Amazon India": 17999,
-            "Flipkart": 17499,
-            "Croma": 18299,
-            "Reliance Digital": 18499,
-            "Vijay Sales": 17990,
-            "Tata CLiQ": 18999
-        },
-        "affiliate_links": {
-            "Amazon India": "https://www.amazon.in/Boldfit-Corrector-Adjustable-Breathable-Straightener/dp/B0GHX848PP?aref=ZMc1TMLYti&content-id=amzn1.sym.7b6188a8-103f-4f88-b43a-19aba06e30c1%3Aamzn1.sym.7b6188a8-103f-4f88-b43a-19aba06e30c1&crid=2U1NOCLR3G3Z5&cv_ct_cx=body%2Bback%2Bposture%2Bcorrecting%2Bbelt&keywords=body%2Bback%2Bposture%2Bcorrecting%2Bbelt&pd_rd_i=B0GHX848PP&pd_rd_r=3a9cee39-ccbb-4851-b7ae-9ede563a00d1&pd_rd_w=OhF5q&pd_rd_wg=OAuyt&pf_rd_p=7b6188a8-103f-4f88-b43a-19aba06e30c1&pf_rd_r=933ZT0S3X42A18JZM2DQ&qid=1795525524&sbo=RZvfv%2F%2FHxDF%2BO5021pAnSA%3D%3D&sprefix=back%2Bbody%2Bpos%2Caps%2C747&sr=1-1-941ebe59-d25b-49d0-b214-12cc5b66c90f&th=1&linkCode=ll2&tag=bharatcompare-21&linkId=46af7374e35c2d4b7f93ec475558ce71&ref_=as_li_ss_tl",
-            "Flipkart": "",
-            "Croma": "",
-            "Reliance Digital": "",
-            "Vijay Sales": "",
-            "Tata CLiQ": ""
-        }
-    },
-    {
-        "name": "HP 15s Laptop",
-        "category": "Laptop",
-        "prices": {
-            "Amazon India": 42999,
-            "Flipkart": 41999,
-            "Croma": 43999,
-            "Reliance Digital": 43499,
-            "Vijay Sales": 42500,
-            "Tata CLiQ": 44999
-        },
-        "affiliate_links": {
-            "Amazon India": "https://www.amazon.in/Boldfit-Corrector-Adjustable-Breathable-Straightener/dp/B0GHX848PP?aref=ZMc1TMLYti&content-id=amzn1.sym.7b6188a8-103f-4f88-b43a-19aba06e30c1%3Aamzn1.sym.7b6188a8-103f-4f88-b43a-19aba06e30c1&crid=2U1NOCLR3G3Z5&cv_ct_cx=body%2Bback%2Bposture%2Bcorrecting%2Bbelt&keywords=body%2Bback%2Bposture%2Bcorrecting%2Bbelt&pd_rd_i=B0GHX848PP&pd_rd_r=3a9cee39-ccbb-4851-b7ae-9ede563a00d1&pd_rd_w=OhF5q&pd_rd_wg=OAuyt&pf_rd_p=7b6188a8-103f-4f88-b43a-19aba06e30c1&pf_rd_r=933ZT0S3X42A18JZM2DQ&qid=1795525524&sbo=RZvfv%2F%2FHxDF%2BO5021pAnSA%3D%3D&sprefix=back%2Bbody%2Bpos%2Caps%2C747&sr=1-1-941ebe59-d25b-49d0-b214-12cc5b66c90f&th=1&linkCode=ll2&tag=bharatcompare-21&linkId=46af7374e35c2d4b7f93ec475558ce71&ref_=as_li_ss_tl",
-            "Flipkart": "",
-            "Croma": "",
-            "Reliance Digital": "",
-            "Vijay Sales": "",
-            "Tata CLiQ": ""
-        }
-    }
-]
+def parse_price(price_text):
+    if price_text is None:
+        return None
+
+    if isinstance(price_text, (int, float)):
+        return float(price_text)
+
+    text = str(price_text)
+    text = text.replace(",", "")
+    text = re.sub(r"[^\d.]", "", text)
+
+    try:
+        return float(text)
+    except (ValueError, TypeError):
+        return None
 
 # =====================================================
-# DEMO PRODUCT SEARCH FUNCTION
+# LIVE SERPAPI GOOGLE SHOPPING SEARCH
 # =====================================================
 
-def search_demo_products(query):
+def search_live_products(query):
+    if not SERPAPI_API_KEY:
+        return None, "SerpApi API key is missing. Add it in Streamlit Secrets."
 
-    query = query.strip().lower()
+    try:
+        client = serpapi.Client(
+            api_key=SERPAPI_API_KEY,
+            timeout=25
+        )
 
-    if not query:
-        return []
+        response = client.search(
+            engine="google_shopping",
+            q=query,
+            gl="in",
+            hl="en",
+            location="India"
+        )
 
-    results = []
+        if response.get("error"):
+            return None, response.get("error")
 
-    for product in DEMO_PRODUCTS:
+        raw_results = response.get("shopping_results", [])
+        products = []
 
-        product_name = product["name"].lower()
-        category = product["category"].lower()
+        for item in raw_results:
+            price_text = item.get("price", "")
+            price_value = item.get("extracted_price")
 
-        if query in product_name or query in category:
-            results.append(product)
+            if price_value is None:
+                price_value = parse_price(price_text)
 
-    return results
+            products.append({
+                "title": item.get("title", "Product"),
+                "price_text": price_text,
+                "price": price_value,
+                "source": item.get("source", "Unknown Seller"),
+                "link": item.get("link", ""),
+                "thumbnail": item.get("thumbnail", ""),
+                "rating": item.get("rating"),
+                "reviews": item.get("reviews"),
+                "delivery": item.get("delivery", "")
+            })
 
+        products.sort(
+            key=lambda x: x["price"] if x["price"] is not None else float("inf")
+        )
+
+        return products, None
+
+    except Exception as e:
+        return None, str(e)
 
 # =====================================================
-# DEMO PRICE COMPARISON FUNCTION
+# DISPLAY LIVE PRODUCT RESULTS
 # =====================================================
 
-def show_demo_comparison(product):
-
+def show_live_results(products, query):
     st.markdown("---")
+    st.subheader("🛍️ Live Shopping Results")
+    st.caption(f"Search results for: {query}")
 
-    st.subheader("📦 " + product["name"])
+    priced_products = [
+        p for p in products
+        if p["price"] is not None
+    ]
 
-    st.caption("Category: " + product["category"])
+    if not products:
+        st.warning("No shopping results found for this search.")
+        return
 
-    st.warning(
-        "⚠️ DEMO DATA — NOT LIVE PRICE. "
-        "These sample prices are only for testing the application."
-    )
+    if priced_products:
+        lowest = priced_products[0]
+        highest = priced_products[-1]
 
-    prices = product["prices"]
+        col1, col2, col3 = st.columns(3)
 
-    lowest_platform = min(prices, key=prices.get)
-    highest_platform = max(prices, key=prices.get)
-
-    lowest_price = prices[lowest_platform]
-    highest_price = prices[highest_platform]
-
-    savings = highest_price - lowest_price
-
-    # PRICE SUMMARY
-
-    col1, col2, col3 = st.columns(3)
-
-    with col1:
-        st.metric(
-            "🏆 Lowest Demo Price",
-            f"₹{lowest_price:,}",
-            lowest_platform
+        col1.metric(
+            "🏆 Lowest Found Price",
+            f"₹{lowest['price']:,.0f}",
+            lowest["source"]
         )
 
-    with col2:
-        st.metric(
-            "Highest Demo Price",
-            f"₹{highest_price:,}",
-            highest_platform
+        col2.metric(
+            "Highest Found Price",
+            f"₹{highest['price']:,.0f}"
         )
 
-    with col3:
-        st.metric(
-            "Potential Demo Savings",
-            f"₹{savings:,}"
+        if len(priced_products) > 1:
+            savings = highest["price"] - lowest["price"]
+        else:
+            savings = 0
+
+        col3.metric(
+            "Potential Difference",
+            f"₹{savings:,.0f}"
         )
 
-    st.markdown("### 🛒 Compare Shopping Platforms")
+        st.success(
+            f"🏆 Lowest listed price: ₹{lowest['price']:,.0f} "
+            f"at {lowest['source']}"
+        )
 
-    sorted_prices = sorted(
-        prices.items(),
-        key=lambda item: item[1]
-    )
+    st.markdown("### 📊 Price Comparison")
 
-    for platform, price in sorted_prices:
+    for index, product in enumerate(products):
+        is_lowest = (
+            priced_products
+            and product["price"] is not None
+            and product["price"] == priced_products[0]["price"]
+        )
 
-        col1, col2, col3 = st.columns([3, 2, 2])
+        with st.container(border=True):
+            col_img, col_info = st.columns([1, 3])
 
-        with col1:
-            st.write("**" + platform + "**")
+            with col_img:
+                if product["thumbnail"]:
+                    st.image(product["thumbnail"], use_container_width=True)
+                else:
+                    st.write("🛍️")
 
-        with col2:
-            st.write(f"₹{price:,}")
+            with col_info:
+                if is_lowest:
+                    st.markdown("### 🏆 BEST PRICE FOUND")
 
-        with col3:
-            affiliate_link = product.get("affiliate_links", {}).get(platform, "")
+                st.markdown(f"**{product['title']}**")
+                st.write(f"**Seller:** {product['source']}")
 
-            if affiliate_link:
-                st.link_button(
-                    "🛒 BUY NOW",
-                    affiliate_link,
-                    use_container_width=True
-                )
+                if product["price"] is not None:
+                    st.markdown(
+                        f"## ₹{product['price']:,.0f}"
+                    )
+                elif product["price_text"]:
+                    st.markdown(f"**Price:** {product['price_text']}")
+                else:
+                    st.warning("Price not available")
 
-            elif platform == lowest_platform:
-                st.success("🏆 Lowest Demo Price")
+                if product["rating"]:
+                    st.write(f"⭐ Rating: {product['rating']}")
 
-            else:
-                st.info("Demo Price")
+                if product["reviews"]:
+                    st.write(f"📝 Reviews: {product['reviews']}")
 
-    st.caption(
-        "Sample prices are illustrative only. "
-        "No retailer API or live price has been connected."
-    )
+                if product["delivery"]:
+                    st.caption(product["delivery"])
 
+                if product["link"]:
+                    st.link_button(
+                        "🛒 VIEW DEAL",
+                        product["link"],
+                        use_container_width=True
+                    )
 
 # =====================================================
 # SIDEBAR
 # =====================================================
 
 with st.sidebar:
-
     st.markdown("## 🛒 BharatCompare")
-
     st.caption("INDIA'S PRODUCT PRICE INTELLIGENCE")
-
     st.divider()
 
     menu = st.radio(
@@ -507,16 +440,13 @@ with st.sidebar:
     )
 
     st.divider()
-
     st.markdown("### 🌐 Supported Platforms")
 
     for name in PLATFORMS.values():
         st.write("🟢", name)
 
     st.divider()
-
-    st.caption("Version 1.0.0 | Development Build")
-
+    st.caption("Version 1.1.0 | Live Search Build")
 
 # =====================================================
 # HOME PAGE
@@ -525,197 +455,95 @@ with st.sidebar:
 if menu == "🏠 Home":
 
     st.markdown("""
-<div class="hero">
-<div class="hero-tag">
-SMART SHOPPING FOR EVERY INDIAN
-</div>
+    <div class="hero">
+        <div class="hero-tag">SMART SHOPPING FOR EVERY INDIAN</div>
+        <div class="hero-title">
+            Don't Pay More.<br>
+            <span class="highlight">Find The Best Deal.</span>
+        </div>
+        <p>
+            Compare products, prices and shopping offers.
+            Make smarter shopping decisions.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
 
-<div class="hero-title">
-Don't Pay More.<br>
-<span class="highlight">Find The Best Deal.</span>
-</div>
+    st.markdown("## 🔍 Compare Any Product")
 
-<div class="hero-description">
-Compare product prices, discounts and offers
-from multiple Indian shopping platforms.
-Make smarter shopping decisions.
-</div>
-</div>
-""", unsafe_allow_html=True)
-    # PRODUCT SEARCH
-
-    st.markdown(
-        '<div class="section-heading">🔍 Compare Any Product</div>',
-        unsafe_allow_html=True
-    )
-
-    st.write(
-        "Paste your Amazon, Flipkart or other supported product link below."
-    )
-
-    with st.form("product_search_form"):
-
-        product_url = st.text_input(
-            "Product URL",
-            placeholder="https://www.flipkart.com/product-link",
-            label_visibility="collapsed"
+    with st.form("home_search_form"):
+        home_query = st.text_input(
+            "Product Name",
+            placeholder="Example: Samsung Galaxy S25 256GB"
         )
 
-        submit = st.form_submit_button(
-            "🔎 ANALYZE PRODUCT LINK",
+        home_search = st.form_submit_button(
+            "🔎 SEARCH LIVE PRICES",
             use_container_width=True
         )
 
-    if submit:
-
-        product, error = analyze_product_url(product_url)
-
-        if error:
-
-            st.error(error)
-
+    if home_search:
+        if not home_query.strip():
+            st.warning("Please enter a product name.")
         else:
+            with st.spinner("Searching live shopping results..."):
+                results, error = search_live_products(home_query)
 
-            st.session_state.product_url = product["url"]
+            if error:
+                st.error("Search failed.")
+                st.caption(error)
+            else:
+                st.session_state.live_results = results
+                st.session_state.last_query = home_query
 
-            st.session_state.search_history.append({
-                "platform": product["platform"],
-                "url": product["url"],
-                "time": datetime.now().strftime("%d-%m-%Y %H:%M")
-            })
+                st.session_state.search_history.append({
+                    "query": home_query,
+                    "time": datetime.now().strftime("%d-%m-%Y %H:%M")
+                })
 
-            st.success(
-                f"Product link recognized! Platform: {product['platform']}"
-            )
-
-            st.info(
-                "URL analysis is working. Live product extraction and "
-                "retailer price integrations are the next development steps. "
-                "No live price has been fetched yet."
-            )
-
-            st.code(product["url"])
+    if st.session_state.live_results:
+        show_live_results(
+            st.session_state.live_results,
+            st.session_state.last_query
+        )
 
     st.markdown("---")
+    st.markdown("## ⚡ Powerful Features")
 
-    # FEATURES
+    feature_data = [
+        ("💰", "Price Comparison", "Compare live shopping listings and prices."),
+        ("🎟️", "Offers & Coupons", "Discover deals when available in search results."),
+        ("🤖", "Product Matching", "Find products using shopping search results."),
+        ("📉", "Price History", "Historical tracking will be added in a future update."),
+        ("🎁", "Combo Offers", "Explore promotions when available."),
+        ("🔔", "Price Alerts", "Price alert system is planned for a future update.")
+    ]
 
-    st.markdown(
-        '<div class="section-heading">⚡ Powerful Features</div>',
-        unsafe_allow_html=True
-    )
+    cols = st.columns(3)
 
-    col1, col2, col3 = st.columns(3)
-
-    with col1:
-
-        st.markdown("""
-        <div class="feature-card">
-            <div class="feature-icon">💰</div>
-            <div class="feature-title">Price Comparison</div>
-            <div class="feature-description">
-                Compare product prices across different
-                shopping platforms.
+    for i, feature in enumerate(feature_data):
+        with cols[i % 3]:
+            st.markdown(f"""
+            <div class="feature-card">
+                <div>{feature[0]}</div>
+                <div class="feature-title">{feature[1]}</div>
+                <div class="feature-description">{feature[2]}</div>
             </div>
-        </div>
-        """, unsafe_allow_html=True)
+            """, unsafe_allow_html=True)
 
-    with col2:
-
-        st.markdown("""
-        <div class="feature-card">
-            <div class="feature-icon">🎟️</div>
-            <div class="feature-title">Offers & Coupons</div>
-            <div class="feature-description">
-                Discover available discounts, bank offers,
-                coupons and cashback.
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    with col3:
-
-        st.markdown("""
-        <div class="feature-card">
-            <div class="feature-icon">🤖</div>
-            <div class="feature-title">AI Product Matching</div>
-            <div class="feature-description">
-                Find exact products and similar alternatives
-                using intelligent matching.
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    col4, col5, col6 = st.columns(3)
-
-    with col4:
-
-        st.markdown("""
-        <div class="feature-card">
-            <div class="feature-icon">📉</div>
-            <div class="feature-title">Price History</div>
-            <div class="feature-description">
-                Track product prices and understand
-                historical price movements.
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    with col5:
-
-        st.markdown("""
-        <div class="feature-card">
-            <div class="feature-icon">🎁</div>
-            <div class="feature-title">Combo Offers</div>
-            <div class="feature-description">
-                Find product combinations and
-                additional promotional benefits.
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    with col6:
-
-        st.markdown("""
-        <div class="feature-card">
-            <div class="feature-icon">🔔</div>
-            <div class="feature-title">Price Alerts</div>
-            <div class="feature-description">
-                Get notified when your favourite
-                product reaches your target price.
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    # SHOPPING PLATFORMS
-
-    st.markdown(
-        '<div class="section-heading">🛍️ Shopping Platforms</div>',
-        unsafe_allow_html=True
-    )
+    st.markdown("## 🛍️ Shopping Platforms")
 
     platform_cols = st.columns(3)
 
     for index, name in enumerate(PLATFORMS.values()):
-
         with platform_cols[index % 3]:
-
             st.markdown(f"""
             <div class="platform-card">
                 🛒 {name}
                 <div class="platform-status">
-                    Connector planned
+                    Search availability depends on live results
                 </div>
             </div>
             """, unsafe_allow_html=True)
-
-    st.info(
-        "Note: Platform names shown here represent planned integrations. "
-        "Live retailer data will appear only after the respective "
-        "connectors are implemented and tested."
-    )
-
-
 
 # =====================================================
 # COMPARE PRODUCTS PAGE
@@ -724,10 +552,7 @@ Make smarter shopping decisions.
 elif menu == "🔍 Compare Products":
 
     st.title("🔍 Compare Products")
-
-    st.write(
-        "Search a product by name or analyze a shopping URL."
-    )
+    st.write("Search a product name or analyze a supported shopping URL.")
 
     search_type = st.radio(
         "Choose Search Method",
@@ -735,59 +560,51 @@ elif menu == "🔍 Compare Products":
         horizontal=True
     )
 
-    # PRODUCT NAME SEARCH
-
     if search_type == "Product Name":
+        st.markdown("### 🔎 Search Product")
 
-        st.markdown("### 🔎 Search Your Product")
-
-        with st.form("demo_product_search"):
-
+        with st.form("live_product_search"):
             product_name = st.text_input(
                 "Product Name",
                 placeholder="Example: iPhone 16 128GB"
             )
 
             search_button = st.form_submit_button(
-                "🔍 SEARCH PRODUCT",
+                "🔍 SEARCH LIVE PRODUCTS",
                 use_container_width=True
             )
 
         if search_button:
-
             if not product_name.strip():
-
                 st.warning("Please enter a product name.")
-
             else:
+                with st.spinner("Searching Google Shopping..."):
+                    results, error = search_live_products(product_name)
 
-                results = search_demo_products(product_name)
-
-                if results:
-
-                    st.success(
-                        f"{len(results)} demo product(s) found."
-                    )
-
-                    for product in results:
-
-                        show_demo_comparison(product)
-
+                if error:
+                    st.error("Live search could not be completed.")
+                    st.caption(error)
                 else:
+                    st.session_state.live_results = results
+                    st.session_state.last_query = product_name
 
-                    st.error(
-                        "No matching demo product found."
-                    )
+                    st.session_state.search_history.append({
+                        "query": product_name,
+                        "time": datetime.now().strftime("%d-%m-%Y %H:%M")
+                    })
 
-                    st.info(
-                        "Try: iPhone 16, Samsung Galaxy S25, "
-                        "Redmi Note 14 or HP 15s."
-                    )
+                    if results:
+                        st.success(f"{len(results)} shopping results found!")
+                    else:
+                        st.warning("No products found.")
 
-    # SHOPPING URL SEARCH
+        if st.session_state.live_results:
+            show_live_results(
+                st.session_state.live_results,
+                st.session_state.last_query
+            )
 
     else:
-
         st.markdown("### 🔗 Analyze Shopping URL")
 
         compare_url = st.text_input(
@@ -796,75 +613,95 @@ elif menu == "🔍 Compare Products":
             placeholder="https://www.amazon.in/..."
         )
 
-        if st.button("ANALYZE PRODUCT URL"):
-
+        if st.button("ANALYZE PRODUCT URL", use_container_width=True):
             product, error = analyze_product_url(compare_url)
 
             if error:
-
                 st.error(error)
-
             else:
-
                 st.session_state.product_url = product["url"]
 
-                st.success(
-                    f"Valid {product['platform']} product URL."
-                )
+                st.success(f"Valid {product['platform']} product URL.")
 
-                st.info(
-                    "Platform recognized successfully. "
-                    "Actual product details and price extraction "
-                    "will be added in a future development step."
-                )
+                extracted_query = product_query_from_url(product["url"])
+
+                st.write("### Extracted Product Search")
+                st.write(extracted_query)
+
+                if extracted_query:
+                    with st.spinner("Searching for this product..."):
+                        results, search_error = search_live_products(extracted_query)
+
+                    if search_error:
+                        st.error("Could not fetch shopping results.")
+                        st.caption(search_error)
+                    else:
+                        st.session_state.live_results = results
+                        st.session_state.last_query = extracted_query
+
+                        if results:
+                            show_live_results(results, extracted_query)
+                        else:
+                            st.warning("No matching shopping results found.")
 
                 st.code(product["url"])
 
-
 # =====================================================
-# BEST DEALS PAGE
+# BEST DEALS
 # =====================================================
 
 elif menu == "🔥 Best Deals":
 
     st.title("🔥 Best Deals")
 
-    st.info(
-        "Best deal discovery will become available after "
-        "retailer integrations are connected."
-    )
+    if st.session_state.live_results:
+        st.write("Deals from your most recent search:")
 
+        priced = [
+            p for p in st.session_state.live_results
+            if p["price"] is not None
+        ]
+
+        priced.sort(key=lambda p: p["price"])
+
+        if priced:
+            for p in priced[:10]:
+                st.markdown(f"""
+                **{p['title']}**  
+                Seller: {p['source']}  
+                Price: ₹{p['price']:,.0f}
+                """)
+                if p["link"]:
+                    st.link_button("VIEW DEAL", p["link"])
+                st.divider()
+        else:
+            st.info("No priced products available yet.")
+    else:
+        st.info("Search a product first to see deals here.")
 
 # =====================================================
-# PRICE HISTORY PAGE
+# PRICE HISTORY
 # =====================================================
 
 elif menu == "📊 Price History":
 
     st.title("📊 Price History")
-
     st.info(
-        "Price history charts will appear after product prices "
-        "start being collected and stored."
+        "Historical prices will be available after a price database "
+        "and scheduled price tracking are implemented."
     )
 
-
 # =====================================================
-# WISHLIST PAGE
+# WISHLIST
 # =====================================================
 
 elif menu == "❤️ Wishlist":
 
     st.title("❤️ My Wishlist")
-
-    st.info(
-        "User accounts and wishlist database functionality "
-        "will be implemented in a later phase."
-    )
-
+    st.info("Wishlist database and user accounts are planned for a future update.")
 
 # =====================================================
-# ABOUT PAGE
+# ABOUT
 # =====================================================
 
 elif menu == "ℹ️ About":
@@ -874,21 +711,28 @@ elif menu == "ℹ️ About":
     st.markdown("""
     ### Smart Shopping. Better Savings.
 
-    Bharat Price Compare is an Indian-focused product
-    price intelligence platform.
+    Bharat Price Compare helps users search shopping listings
+    and compare prices from available online merchants.
 
-    Our goal is to help customers:
+    Our goals:
 
-    - Compare product prices.
-    - Discover discounts and offers.
-    - Find exact products and alternatives.
-    - Track historical prices.
-    - Make better shopping decisions.
+    - Find products online.
+    - Compare listed prices.
+    - Discover sellers.
+    - Find lower-priced options.
+    - Make smarter shopping decisions.
 
-    **Our Mission:** Help every Indian customer
-    shop smarter.
+    **Our Mission:** Help every Indian customer shop smarter.
     """)
 
+# =====================================================
+# SEARCH HISTORY
+# =====================================================
+
+if st.session_state.search_history:
+    with st.expander("🕘 Recent Searches"):
+        for item in reversed(st.session_state.search_history[-10:]):
+            st.write(item)
 
 # =====================================================
 # FOOTER
@@ -898,33 +742,18 @@ st.markdown("""
 <div class="footer">
 <b>Bharat Price Compare</b><br>
 Smart Shopping. Better Savings.<br><br>
-Made for India 🇮🇳
-<br><br>
+Made for India 🇮🇳<br><br>
 © 2026 Bharat Price Compare. All Rights Reserved.
 </div>
 """, unsafe_allow_html=True)
 
-
-# ==========================================
-# AFFILIATE DISCLOSURE
-# ==========================================
-
 st.markdown("---")
-
 st.markdown(
-    "<h2 style='text-align:center;'>Affiliate Disclosure</h2>",
+    "<h3 style='text-align:center;'>Affiliate Disclosure</h3>",
     unsafe_allow_html=True
 )
-
-st.info(
-    "As an Amazon Associate I earn from qualifying purchases."
-)
-
 st.caption(
-    "Some links on Bharat Price Compare are affiliate links. "
-    "We may earn a commission when you make a qualifying purchase. "
-    "This comes at no additional cost to you."
+    "Shopping links may lead to retailer websites. "
+    "Price and availability can change; verify details on the retailer page."
 )
-
 st.markdown("---")
-
