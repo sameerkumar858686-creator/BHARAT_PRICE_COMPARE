@@ -193,6 +193,9 @@ if "live_results" not in st.session_state:
 if "last_query" not in st.session_state:
     st.session_state.last_query = ""
 
+if "custom_affiliate_url" not in st.session_state:
+    st.session_state.custom_affiliate_url = ""
+
 # =====================================================
 # SUPPORTED PLATFORMS
 # =====================================================
@@ -501,42 +504,34 @@ def show_live_results(products, query):
                 if product["delivery"]:
                     st.caption(product["delivery"])
 
-            # AFFILIATE LINK ONLY
-                affiliate_link = product.get("affiliate_link")
+            # PRODUCT ACTION BUTTONS
+                normal_url = (
+                    product.get("link")
+                    or product.get("product_link")
+                    or product.get("product_url")
+                    or ""
+                )
+                custom_affiliate_url = (
+                    st.session_state.get("custom_affiliate_url", "")
+                    if index == 0 else ""
+                )
+                buy_url = custom_affiliate_url or product.get("affiliate_link") or ""
 
-                if affiliate_link and affiliate_link.startswith("https://"):
-                    st.link_button(
-                        "🛒 BUY NOW",
-                        affiliate_link,
-                        use_container_width=True
-                    )
-
-                    st.markdown(
-                        f"[🔗 View Product / {product['title']}]({affiliate_link})"
-                    )
-                else:
-                    st.info("Affiliate link not available for this product.")
-                
-                # -----------------------------------------
-                # AFFILIATE BUY / VIEW DEAL BUTTON
-                # -----------------------------------------
-
-                product_url = product.get("affiliate_link") or product.get("link")
-
-                if product_url:
-                    if product.get("is_affiliate"):
-                        st.link_button(
-                            "🛒 BUY NOW",
-                            product_url,
-                            use_container_width=True
-                        )
+                if buy_url and buy_url.startswith(("https://", "http://")):
+                    st.link_button("🛒 BUY NOW", buy_url, use_container_width=True)
+                    if custom_affiliate_url:
+                        st.caption("Your submitted affiliate link is attached to the first result.")
+                    elif product.get("is_affiliate"):
                         st.caption("Affiliate link • Commission may be earned")
-                    else:
-                        st.link_button(
-                            "🛒 VIEW DEAL",
-                            product_url,
-                            use_container_width=True
-                        )
+
+                # View Deals button, with Google Shopping fallback if listing URL missing
+                view_url = normal_url
+                if not view_url:
+                    from urllib.parse import quote_plus
+                    view_url = "https://www.google.com/search?tbm=shop&q=" + quote_plus(product.get("title", query))
+
+                if view_url and view_url.startswith(("https://", "http://")):
+                    st.link_button("🔎 VIEW DEALS", view_url, use_container_width=True)
 
 # =====================================================
 # SIDEBAR
@@ -602,6 +597,7 @@ if menu == "🏠 Home":
         )
 
     if home_search:
+        st.session_state.custom_affiliate_url = ""
         if not home_query.strip():
             st.warning("Please enter a product name.")
         else:
@@ -695,6 +691,7 @@ elif menu == "🔍 Compare Products":
             )
 
         if search_button:
+            st.session_state.custom_affiliate_url = ""
             if not product_name.strip():
                 st.warning("Please enter a product name.")
             else:
@@ -740,6 +737,7 @@ elif menu == "🔍 Compare Products":
                 st.error(error)
             else:
                 st.session_state.product_url = product["url"]
+                st.session_state.custom_affiliate_url = product["url"]
 
                 st.success(f"Valid {product['platform']} product URL.")
 
