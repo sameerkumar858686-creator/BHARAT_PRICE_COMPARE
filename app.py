@@ -1,6 +1,6 @@
 
 import streamlit as st
-from urllib.parse import urlparse
+from urllib.parse import urlparse, quote_plus
 from datetime import datetime
 
 # =====================================================
