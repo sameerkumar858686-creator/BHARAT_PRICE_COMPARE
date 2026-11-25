@@ -1,7 +1,11 @@
 
 import streamlit as st
+import os
+import serpapi
+
 from urllib.parse import urlparse, quote_plus
 from datetime import datetime
+from dotenv import load_dotenv
 
 # =====================================================
 # BHARAT PRICE COMPARE
@@ -14,6 +18,13 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
+# =====================================================
+# SERPAPI CONFIGURATION
+# =====================================================
+
+load_dotenv()
+
+SERPAPI_API_KEY = os.getenv("SERPAPI_API_KEY", "").strip()
 
 # =====================================================
 # CUSTOM CSS
