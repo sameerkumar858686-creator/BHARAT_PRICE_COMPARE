@@ -238,6 +238,36 @@ def analyze_product_url(url):
     except Exception:
         return None, "Invalid product URL."
 
+# =====================================================
+# SHOPPING PLATFORM SEARCH LINKS
+# =====================================================
+
+def platform_search_url(platform, product_name):
+
+    query = quote_plus(product_name)
+
+    search_urls = {
+
+        "Amazon India":
+            f"https://www.amazon.in/s?k={query}",
+
+        "Flipkart":
+            f"https://www.flipkart.com/search?q={query}",
+
+        "Croma":
+            f"https://www.croma.com/search/?text={query}",
+
+        "Reliance Digital":
+            f"https://www.reliancedigital.in/search?q={query}",
+
+        "Vijay Sales":
+            f"https://www.vijaysales.com/search?query={query}",
+
+        "Tata CLiQ":
+            f"https://www.tatacliq.com/search/?searchCategory=all&text={query}",
+    }
+
+    return search_urls.get(platform, "")
 
 # =====================================================
 # DEMO PRODUCT DATABASE
