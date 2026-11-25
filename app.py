@@ -4,13 +4,20 @@ import os
 import re
 import serpapi
 
-from urllib.parse import urlparse, unquote
+from urllib.parse import (
+    urlparse,
+    unquote,
+    parse_qs,
+    urlencode,
+    urlunparse
+)
 from datetime import datetime
 from dotenv import load_dotenv
 
 # =====================================================
 # BHARAT PRICE COMPARE
 # LIVE PRODUCT SEARCH - SERPAPI GOOGLE SHOPPING
+# AFFILIATE LINK SUPPORT
 # =====================================================
 
 st.set_page_config(
@@ -33,6 +40,22 @@ except Exception:
 
 SERPAPI_API_KEY = (
     SERPAPI_API_KEY or os.getenv("SERPAPI_API_KEY", "")
+).strip()
+
+# =====================================================
+# AFFILIATE CONFIGURATION
+# =====================================================
+
+try:
+    AMAZON_ASSOCIATE_TAG = st.secrets.get(
+        "AMAZON_ASSOCIATE_TAG", ""
+    )
+except Exception:
+    AMAZON_ASSOCIATE_TAG = ""
+
+AMAZON_ASSOCIATE_TAG = (
+    AMAZON_ASSOCIATE_TAG
+    or os.getenv("AMAZON_ASSOCIATE_TAG", "")
 ).strip()
 
 # =====================================================
@@ -263,6 +286,63 @@ def parse_price(price_text):
         return None
 
 # =====================================================
+# AUTOMATIC AFFILIATE LINK CONVERSION
+# =====================================================
+
+def convert_to_affiliate_link(original_url):
+    """
+    Converts direct Amazon India product URLs to affiliate links
+    using the configured Amazon Associate Tag.
+
+    Other platforms remain normal links until their official
+    affiliate link method is configured.
+    """
+
+    if not original_url:
+        return original_url, False, "No URL"
+
+    if not AMAZON_ASSOCIATE_TAG:
+        return original_url, False, "Affiliate tag not configured"
+
+    try:
+        parsed = urlparse(original_url)
+        domain = (parsed.hostname or "").lower()
+
+        if domain.startswith("www."):
+            domain = domain[4:]
+
+        # Only convert direct Amazon India links
+        is_amazon = (
+            domain == "amazon.in"
+            or domain.endswith(".amazon.in")
+        )
+
+        if not is_amazon:
+            return original_url, False, "Standard Link"
+
+        query_params = parse_qs(
+            parsed.query,
+            keep_blank_values=True
+        )
+
+        # Add or replace Amazon Associate tracking tag
+        query_params["tag"] = [AMAZON_ASSOCIATE_TAG]
+
+        new_query = urlencode(
+            query_params,
+            doseq=True
+        )
+
+        affiliate_url = urlunparse(
+            parsed._replace(query=new_query)
+        )
+
+        return affiliate_url, True, "Amazon Affiliate"
+
+    except Exception:
+        return original_url, False, "Standard Link"
+
+# =====================================================
 # LIVE SERPAPI GOOGLE SHOPPING SEARCH
 # =====================================================
 
@@ -297,12 +377,22 @@ def search_live_products(query):
             if price_value is None:
                 price_value = parse_price(price_text)
 
+            original_link = item.get("link", "")
+
+            # Affiliate conversion
+            affiliate_link, is_affiliate, affiliate_type = (
+                convert_to_affiliate_link(original_link)
+            )
+
             products.append({
                 "title": item.get("title", "Product"),
                 "price_text": price_text,
                 "price": price_value,
                 "source": item.get("source", "Unknown Seller"),
-                "link": item.get("link", ""),
+                "link": original_link,
+                "affiliate_link": affiliate_link,
+                "is_affiliate": is_affiliate,
+                "affiliate_type": affiliate_type,
                 "thumbnail": item.get("thumbnail", ""),
                 "rating": item.get("rating"),
                 "reviews": item.get("reviews"),
@@ -411,12 +501,26 @@ def show_live_results(products, query):
                 if product["delivery"]:
                     st.caption(product["delivery"])
 
-                if product["link"]:
-                    st.link_button(
-                        "🛒 VIEW DEAL",
-                        product["link"],
-                        use_container_width=True
-                    )
+                # -----------------------------------------
+                # AFFILIATE BUY / VIEW DEAL BUTTON
+                # -----------------------------------------
+
+                product_url = product.get("affiliate_link") or product.get("link")
+
+                if product_url:
+                    if product.get("is_affiliate"):
+                        st.link_button(
+                            "🛒 BUY NOW",
+                            product_url,
+                            use_container_width=True
+                        )
+                        st.caption("Affiliate link • Commission may be earned")
+                    else:
+                        st.link_button(
+                            "🛒 VIEW DEAL",
+                            product_url,
+                            use_container_width=True
+                        )
 
 # =====================================================
 # SIDEBAR
@@ -446,7 +550,7 @@ with st.sidebar:
         st.write("🟢", name)
 
     st.divider()
-    st.caption("Version 1.1.0 | Live Search Build")
+    st.caption("Version 1.2.0 | Affiliate Build")
 
 # =====================================================
 # HOME PAGE
@@ -671,8 +775,16 @@ elif menu == "🔥 Best Deals":
                 Seller: {p['source']}  
                 Price: ₹{p['price']:,.0f}
                 """)
-                if p["link"]:
-                    st.link_button("VIEW DEAL", p["link"])
+
+                deal_url = p.get("affiliate_link") or p.get("link")
+
+                if deal_url:
+                    if p.get("is_affiliate"):
+                        st.link_button("🛒 BUY NOW", deal_url)
+                        st.caption("Affiliate link")
+                    else:
+                        st.link_button("VIEW DEAL", deal_url)
+
                 st.divider()
         else:
             st.info("No priced products available yet.")
@@ -753,7 +865,8 @@ st.markdown(
     unsafe_allow_html=True
 )
 st.caption(
-    "Shopping links may lead to retailer websites. "
-    "Price and availability can change; verify details on the retailer page."
+    "Some shopping links may be affiliate links. "
+    "Bharat Price Compare may earn commission from qualifying purchases. "
+    "Prices and availability can change; verify details on the retailer page."
 )
 st.markdown("---")
