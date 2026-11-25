@@ -501,6 +501,22 @@ def show_live_results(products, query):
                 if product["delivery"]:
                     st.caption(product["delivery"])
 
+            # AFFILIATE LINK ONLY
+                affiliate_link = product.get("affiliate_link")
+
+                if affiliate_link and affiliate_link.startswith("https://"):
+                    st.link_button(
+                        "🛒 BUY NOW",
+                        affiliate_link,
+                        use_container_width=True
+                    )
+
+                    st.markdown(
+                        f"[🔗 View Product / {product['title']}]({affiliate_link})"
+                    )
+                else:
+                    st.info("Affiliate link not available for this product.")
+                
                 # -----------------------------------------
                 # AFFILIATE BUY / VIEW DEAL BUTTON
                 # -----------------------------------------
