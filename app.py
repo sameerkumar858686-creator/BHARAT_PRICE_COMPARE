@@ -511,21 +511,21 @@ def show_live_results(products, query):
                     or product.get("product_url")
                     or ""
                 )
-                custom_affiliate_url = (
-                    st.session_state.get("custom_affiliate_url", "")
-                    if index == 0 else ""
-                )
-                buy_url = custom_affiliate_url or product.get("affiliate_link") or ""
+                # Each search-result card must use its OWN product URL.
+                # Never attach the user's separately submitted URL to result index 0.
+                result_url = normal_url
+                affiliate_url = product.get("affiliate_link") or ""
 
+                # Buy Now: affiliate URL for this result, otherwise its normal URL.
+                buy_url = affiliate_url or result_url
                 if buy_url and buy_url.startswith(("https://", "http://")):
-                    st.link_button("🛒 BUY NOW", buy_url, use_container_width=True)
-                    if custom_affiliate_url:
-                        st.caption("Your submitted affiliate link is attached to the first result.")
-                    elif product.get("is_affiliate"):
+                    button_label = "🛒 BUY NOW" if product.get("is_affiliate") else "🛒 VIEW PRODUCT"
+                    st.link_button(button_label, buy_url, use_container_width=True)
+                    if product.get("is_affiliate"):
                         st.caption("Affiliate link • Commission may be earned")
 
-                # View Deals button, with Google Shopping fallback if listing URL missing
-                view_url = normal_url
+                # View Deals uses the listing's own link, or Google Shopping search fallback.
+                view_url = result_url
                 if not view_url:
                     from urllib.parse import quote_plus
                     view_url = "https://www.google.com/search?tbm=shop&q=" + quote_plus(product.get("title", query))
@@ -740,6 +740,15 @@ elif menu == "🔍 Compare Products":
                 st.session_state.custom_affiliate_url = product["url"]
 
                 st.success(f"Valid {product['platform']} product URL.")
+
+                # Dedicated card for the exact URL the user submitted.
+                # It is kept separate from Google Shopping search results so
+                # it cannot accidentally open an unrelated result.
+                st.markdown("### 🔗 Your Submitted Product")
+                st.caption("This button opens the exact product URL you entered.")
+                submitted_url = st.session_state.custom_affiliate_url
+                if submitted_url and submitted_url.startswith(("https://", "http://")):
+                    st.link_button("🛒 BUY NOW — SUBMITTED LINK", submitted_url, use_container_width=True)
 
                 extracted_query = product_query_from_url(product["url"])
 
