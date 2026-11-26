@@ -253,20 +253,85 @@ def analyze_product_url(url):
 # =====================================================
 
 def product_query_from_url(url):
+    details = extract_product_details_from_url(url)
+    return details.get("title", "")[:150]
+
+# =====================================================
+# PRODUCT URL DETAILS + TITLE MATCHING
+# =====================================================
+
+def extract_product_details_from_url(url):
+    """Extract a search title and product identifier from supported product URLs.
+    This does not scrape the retailer page; URL slug/IDs are the available signals.
+    """
     parsed = urlparse(url)
+    domain = (parsed.hostname or "").lower().removeprefix("www.")
     path = unquote(parsed.path)
+    asin = ""
+    title = ""
 
-    # Amazon product links often contain /product-name/dp/ASIN
-    if "/dp/" in path:
-        path = path.split("/dp/")[0]
+    if "amazon.in" in domain:
+        m = re.search(r"/(?:dp|gp/product)/([A-Z0-9]{10})", path, re.I)
+        if m:
+            asin = m.group(1).upper()
+        # Amazon product title is generally in the path before /dp/.
+        if "/dp/" in path:
+            title_path = path.split("/dp/")[0]
+        elif "/gp/product/" in path:
+            title_path = path.split("/gp/product/")[0]
+        else:
+            title_path = path
+        title = re.sub(r"^/", "", title_path)
+    else:
+        title = path
 
-    # Remove common shopping URL noise
-    path = path.replace("-", " ").replace("_", " ").replace("/", " ")
-    path = re.sub(r"\s+", " ", path)
-    path = re.sub(r"\b(dp|gp|product|products|item)\b", " ", path)
-    path = re.sub(r"\s+", " ", path).strip()
+    title = re.sub(r"[-_/]+", " ", title)
+    title = re.sub(r"\b(?:dp|gp|product|products|item|ref|tag)\b", " ", title, flags=re.I)
+    title = re.sub(r"\s+", " ", title).strip()
+    # Strip common URL tracking/query fragments from extracted text.
+    title = title[:180]
+    return {"title": title, "asin": asin, "domain": domain}
 
-    return path[:150]
+
+
+_STOPWORDS = {
+    "for", "with", "and", "the", "of", "in", "on", "by", "from", "to",
+    "new", "best", "buy", "online", "india", "amazon", "flipkart", "product",
+    "men", "women", "unisex", "pack", "pcs", "piece", "pieces"
+}
+
+def _title_tokens(text):
+    words = re.findall(r"[a-z0-9]+", (text or "").lower())
+    return {w for w in words if len(w) > 1 and w not in _STOPWORDS}
+
+
+def product_title_match_score(anchor_title, candidate_title):
+    """Token overlap score with containment bonus; used as a conservative filter."""
+    a = _title_tokens(anchor_title)
+    b = _title_tokens(candidate_title)
+    if not a or not b:
+        return 0.0
+    overlap = len(a & b)
+    # Recall of the URL-derived anchor title is more important than candidate verbosity.
+    recall = overlap / len(a)
+    precision = overlap / len(b)
+    score = 0.72 * recall + 0.28 * precision
+    if a.issubset(b):
+        score = max(score, 0.82)
+    return min(score, 1.0)
+
+
+def filter_comparison_matches(anchor_title, results, minimum_score=0.48):
+    """Keep only plausibly matching product titles; never claim certainty."""
+    kept = []
+    for product in results or []:
+        score = product_title_match_score(anchor_title, product.get("title", ""))
+        product["match_score"] = score
+        if score >= minimum_score:
+            kept.append(product)
+    return kept
+
+
 
 # =====================================================
 # PRICE PARSER
@@ -519,10 +584,11 @@ def show_live_results(products, query):
                 # Buy Now: affiliate URL for this result, otherwise its normal URL.
                 buy_url = affiliate_url or result_url
                 if buy_url and buy_url.startswith(("https://", "http://")):
-                    button_label = "🛒 BUY NOW" if product.get("is_affiliate") else "🛒 VIEW PRODUCT"
-                    st.link_button(button_label, buy_url, use_container_width=True)
+                    st.link_button("🛒 BUY NOW", buy_url, use_container_width=True)
                     if product.get("is_affiliate"):
                         st.caption("Affiliate link • Commission may be earned")
+                    else:
+                        st.caption("Retailer product link")
 
                 # View Deals uses the listing's own link, or Google Shopping search fallback.
                 view_url = result_url
@@ -731,6 +797,8 @@ elif menu == "🔍 Compare Products":
         )
 
         if st.button("ANALYZE PRODUCT URL", use_container_width=True):
+            st.session_state.live_results = []
+            st.session_state.last_query = ""
             product, error = analyze_product_url(compare_url)
 
             if error:
@@ -750,26 +818,74 @@ elif menu == "🔍 Compare Products":
                 if submitted_url and submitted_url.startswith(("https://", "http://")):
                     st.link_button("🛒 BUY NOW — SUBMITTED LINK", submitted_url, use_container_width=True)
 
-                extracted_query = product_query_from_url(product["url"])
+                details = extract_product_details_from_url(product["url"])
+                extracted_query = details["title"] or product_query_from_url(product["url"])
+                asin = details.get("asin", "")
 
-                st.write("### Extracted Product Search")
-                st.write(extracted_query)
+                st.write("### Identified Product (URL-based)")
+                st.write(extracted_query or "Product title could not be extracted from this URL.")
+                if asin:
+                    st.caption(f"Amazon product ID (ASIN): {asin}")
 
-                if extracted_query:
-                    with st.spinner("Searching for this product..."):
-                        results, search_error = search_live_products(extracted_query)
+                # Keep the customer's original URL as the exact anchor product.
+                st.markdown("### 🧾 Original Product from Your Link")
+                st.caption("This is the exact URL you submitted. Search results below are candidate matches, not guaranteed identical products.")
+                original_buy_url, original_is_affiliate, _ = convert_to_affiliate_link(product["url"])
+                st.link_button("🛒 BUY NOW — ORIGINAL PRODUCT", original_buy_url or product["url"], use_container_width=True)
+                if original_is_affiliate:
+                    st.caption("Amazon affiliate tracking tag is attached (if configured in app secrets).")
 
-                    if search_error:
-                        st.error("Could not fetch shopping results.")
-                        st.caption(search_error)
-                    else:
-                        st.session_state.live_results = results
-                        st.session_state.last_query = extracted_query
+                # Search using extracted title, plus ASIN for Amazon URLs.
+                all_candidates = []
+                search_error = None
+                search_queries = []
+                if asin:
+                    search_queries.append(asin)
+                if extracted_query and extracted_query.lower() not in [q.lower() for q in search_queries]:
+                    search_queries.append(extracted_query)
 
-                        if results:
-                            show_live_results(results, extracted_query)
-                        else:
-                            st.warning("No matching shopping results found.")
+                with st.spinner("Searching for the same product across shopping listings..."):
+                    for candidate_query in search_queries[:2]:
+                        candidate_results, candidate_error = search_live_products(candidate_query)
+                        if candidate_error:
+                            search_error = candidate_error
+                            continue
+                        all_candidates.extend(candidate_results or [])
+
+                # Deduplicate by title + source + URL before scoring.
+                seen_candidate_keys = set()
+                unique_candidates = []
+                for candidate in all_candidates:
+                    key = (candidate.get("title", "").strip().lower(),
+                           candidate.get("source", "").strip().lower(),
+                           candidate.get("link", "").strip())
+                    if key not in seen_candidate_keys:
+                        seen_candidate_keys.add(key)
+                        unique_candidates.append(candidate)
+
+                matches = filter_comparison_matches(extracted_query, unique_candidates, minimum_score=0.48)
+                # Avoid listing the exact submitted retailer URL as a duplicate comparison card.
+                submitted_lower = product["url"].lower()
+                matches = [m for m in matches if (m.get("link", "").lower() != submitted_lower)]
+                matches.sort(key=lambda p: (p.get("match_score", 0), p.get("price") is not None), reverse=True)
+
+                st.markdown("### 🌐 Cross-Store Comparison")
+                st.caption("Candidate listings are filtered by product-title similarity. Verify model/specifications before purchase.")
+                if search_error and not unique_candidates:
+                    st.error("Could not fetch shopping results.")
+                    st.caption(search_error)
+                elif matches:
+                    st.session_state.live_results = matches
+                    st.session_state.last_query = extracted_query
+                    show_live_results(matches, extracted_query)
+                else:
+                    st.session_state.live_results = []
+                    st.session_state.last_query = extracted_query
+                    st.warning("No sufficiently similar listings were found. We are hiding unrelated products rather than showing a misleading comparison.")
+                    if unique_candidates:
+                        with st.expander("See unfiltered search candidates (not comparison matches)"):
+                            for candidate in unique_candidates[:6]:
+                                st.write(candidate.get("title", "Product"), "—", candidate.get("source", ""), candidate.get("price_text", ""))
 
                 st.code(product["url"])
 
